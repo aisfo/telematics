@@ -36,7 +36,7 @@ def analyze(driver):
     features = imp.fit_transform(features)
     
     #standardize features for PCA
-    stf = (features - features.mean())/features.std()
+    features = (features - features.mean())/features.std()
     
     #principal component analysis
     pca = PCA(3) #TODO: number of components? 
