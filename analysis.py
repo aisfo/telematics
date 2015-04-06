@@ -19,6 +19,7 @@ from sklearn.preprocessing import Imputer
 from cluster import Cluster
 from preprocess import extract_features
 
+
 #returns processed route points and classifications for them
 def analyze(driver):
     
@@ -32,14 +33,14 @@ def analyze(driver):
     
     #impute missing values
     imp = Imputer(missing_values='NaN', strategy='mean', axis=0)
-    ffeatures = imp.fit_transform(features)
+    features = imp.fit_transform(features)
     
     #standardize features for PCA
-    stf = (ffeatures - ffeatures.mean())/ffeatures.std()
+    stf = (features - features.mean())/features.std()
     
     #principal component analysis
-    pca = PCA(2) # TODO: number of components? 
-    rstf = pca.fit_transform(stf) # TODO: normalize/standardize?
+    pca = PCA(3) #TODO: number of components? 
+    features = pca.fit_transform(features) #TODO: standardize?
     print "PCA explained variance:", pca.explained_variance_ratio_, sum(pca.explained_variance_ratio_)
     
     
@@ -49,12 +50,13 @@ def analyze(driver):
     #agglomerative clustering until cluster with 101 elements is build
     core_cluster = None
     pairs = []
-    clusters = [Cluster([pnt]) for pnt in rstf]
+    clusters = [Cluster([pnt]) for pnt in features]
     for i1 in xrange(len(clusters)):
         for i2 in xrange(len(clusters)):
             if i1 < i2:
                 d = clusters[i1].linkage(clusters[i2])
                 heappush(pairs, (d, clusters[i1], clusters[i2]))
+                
     while len(clusters) > 1:                
         closest_pair = heappop(pairs)
         first_cluster = closest_pair[1]
@@ -63,7 +65,7 @@ def analyze(driver):
         if first_cluster.size() == 0 or second_cluster.size() == 0:
             continue
         
-        if first_cluster.size() + second_cluster.size() > 100: #limit to 101?
+        if first_cluster.size() + second_cluster.size() > 100:
             dists = []
             for pnt in second_cluster.points:
                 dd = first_cluster.pnt_linkage(pnt)
@@ -73,7 +75,6 @@ def analyze(driver):
             while first_cluster.size() < 101:
                 first_cluster.add( dists[i][1] )
                 i += 1
- 
             core_cluster = first_cluster
             break
                 
@@ -91,7 +92,7 @@ def analyze(driver):
                 d = cluster.linkage(first_cluster)
                 heappush(pairs, (d, cluster, first_cluster))     
     
-    #average of core cluster is prototype
+    #compute average point of core cluster as the prototype
     prototype = core_cluster.centre()
     print "Prototype:", prototype
     
@@ -101,24 +102,21 @@ def analyze(driver):
     
     #sort the routes by distance from the prototype
     sorted_pnts = []
-    for i in xrange(len(rstf)):
-        pnt = rstf[i]
-        d = distance.euclidean(pnt, prototype)
+    for i in xrange(len(features)):
+        pnt = features[i]
+        d = distance.euclidean(pnt, prototype) #TODO: Distance measure?
         sorted_pnts.append( (d, pnt, i) )
     sorted_pnts.sort()
     
     #compute compactness and radius of core cluster
-    comp = core_cluster.compactness() 
-    rad = core_cluster.radius()
+    core_cluster_comp = core_cluster.compactness() 
+    core_cluster_radius = core_cluster.radius()
     
     #use core cluster compactness to farthest point distance measure 
     #for evaluating the feature selection
     far = sorted_pnts[-1][0]    
-    print "Compactness to Farthest Point:", comp/far
-    
-    #plotting
-    lines = np.zeros((200, 7))
-    
+    print "Compactness to Farthest Point:", core_cluster_comp/far, "[minimize]"
+
     #sum of squared distances
     ssum = sorted_pnts[0][0] ** 2
     #final cluster with prototype included 
@@ -133,39 +131,25 @@ def analyze(driver):
         point = point_tuple[1]
         l_idx = point_tuple[2]
         
-        ssum += (dist ** 2)
-        
-        lines[i][0] = dist
-        lines[i][1] = sqrt(ssum/(i+1))
-        lines[i][2] = final_cluster.compactness()
-        lines[i][3] = final_cluster.min_linkage(point)
-        lines[i][4] = final_cluster.pnt_linkage(point)
-        lines[i][5] = comp
-        lines[i][6] = rad
+        ssum += (dist ** 2)        
+        fcluster_compactness = final_cluster.compactness()
+        min_fcluster_point_distance = final_cluster.min_linkage(point)
+        avg_fcluster_point_distance = final_cluster.pnt_linkage(point)
+        print i, dist, fcluster_compactness, min_fcluster_point_distance, avg_fcluster_point_distance, core_cluster_comp, core_cluster_radius
 
-        if lines[i][3] < lines[i][6]: #TODO: Choice and evaluation of cutoff
+        if min_fcluster_point_distance < core_cluster_radius: #TODO: Choice and evaluation of cutoff
             labels[l_idx] = 1
             final_cluster.add(point)
-            
-    plt.plot(lines[1:,0])
-    plt.plot(lines[1:,1])
-    plt.plot(lines[1:,2])
-    plt.plot(lines[1:,3])
-    plt.plot(lines[1:,4])
-    plt.plot(lines[1:,5])
-    plt.plot(lines[1:,6])
         
-    return rstf, labels
+    return features, labels
     
     
 
 if __name__ == "__main__":
     
+    points, labels = analyze(10)
+    
     plt.figure(1)
-    
-    points, labels = analyze(1)
-    
-    plt.figure(2)
     colors = ["red" if l == 1 else "black" for l in labels]
     plt.scatter( points[:,0], points[:,1], color=colors)
 

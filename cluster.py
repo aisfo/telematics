@@ -32,17 +32,6 @@ class Cluster():
         return np.min(dist_sum)
     
     def merge(self, other):
-        #=======================================================================
-        # if self.size() + other.size() > 101:
-        #     self.core = list(self.points)
-        #     linkages = []
-        #     for pnt in other.points:
-        #         d = self.pnt_linkage(pnt)
-        #         heappush(linkages, (d, pnt))
-        #     while len(self.core) < 101:
-        #         self.core.append( heappop(linkages)[1] )
-        #     print len(self.core)
-        #=======================================================================
         self.points = np.append(self.points, other.points, 0)
     
     def size(self):
