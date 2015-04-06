@@ -64,7 +64,7 @@ class Cluster():
             return 0
         return np.mean(dists)
     
-    def radius(self):
+    def diameter(self):
         l = self.size()
         dists = []
         for i in xrange(l):

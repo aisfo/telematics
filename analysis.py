@@ -6,13 +6,10 @@ Created on Mar 24, 2015
 
 from __future__ import division
 
-from math import sqrt
 from heapq import heappush, heappop
-
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial import distance
-
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import Imputer
 
@@ -110,34 +107,27 @@ def analyze(driver):
     
     #compute compactness and radius of core cluster
     core_cluster_comp = core_cluster.compactness() 
-    core_cluster_radius = core_cluster.radius()
+    core_cluster_diam = core_cluster.diameter()
     
     #use core cluster compactness to farthest point distance measure 
     #for evaluating the feature selection
     far = sorted_pnts[-1][0]    
     print "Compactness to Farthest Point:", core_cluster_comp/far, "[minimize]"
 
-    #sum of squared distances
-    ssum = sorted_pnts[0][0] ** 2
     #final cluster with prototype included 
     final_cluster = Cluster([prototype])
     #all zeros labels array
     labels = np.zeros(200)
-    
     #classify as true until cutoff
     for i in xrange(0, len(sorted_pnts)):
         point_tuple = sorted_pnts[i]
         dist = point_tuple[0]
         point = point_tuple[1]
         l_idx = point_tuple[2]
-        
-        ssum += (dist ** 2)        
-        fcluster_compactness = final_cluster.compactness()
+       
         min_fcluster_point_distance = final_cluster.min_linkage(point)
-        avg_fcluster_point_distance = final_cluster.pnt_linkage(point)
-        print i, dist, fcluster_compactness, min_fcluster_point_distance, avg_fcluster_point_distance, core_cluster_comp, core_cluster_radius
-
-        if min_fcluster_point_distance < core_cluster_radius: #TODO: Choice and evaluation of cutoff
+        
+        if min_fcluster_point_distance < core_cluster_diam: #TODO: Choice and evaluation of cutoff
             labels[l_idx] = 1
             final_cluster.add(point)
         
