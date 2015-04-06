@@ -36,11 +36,11 @@ def analyze(driver):
     features = (features - features.mean())/features.std()
     
     #principal component analysis
-    pca = PCA(3) #TODO: number of components? 
+    pca = PCA(0.8) #TODO: number of components? 
     features = pca.fit_transform(features) #TODO: standardize?
-    print "PCA explained variance:", pca.explained_variance_ratio_, sum(pca.explained_variance_ratio_)
-    
-    
+    print "PCA explained variance:", pca.explained_variance_ratio_, pca.n_components_
+
+
     ##BUILD CORE CLUSTER AND FIND PROTOTYPE
     print "Building core cluster and finding prototype..."
     

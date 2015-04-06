@@ -52,7 +52,7 @@ def preprocess(driver):
 
 def extract_features(driverid):
     
-    nparts = 11
+    nparts = 10
     mangle = (math.pi/2)/nparts
     
     feature_names = []
