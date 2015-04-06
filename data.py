@@ -17,7 +17,10 @@ def get_route(driver_id, route_id):
     if driver_id < MIN_DRIVER or driver_id > MAX_DRIVER or route_id < MIN_ROUTE or route_id > MAX_ROUTE:
         return None
     csv_path = join(DATA_ROOT, str(driver_id), str(route_id) + ".csv")
-    data = read_csv(csv_path)
+    try:
+        data = read_csv(csv_path)
+    except:
+        return None
     return data
  
 def get_all(driver_id):   
@@ -25,7 +28,9 @@ def get_all(driver_id):
         return None
     routes = []
     for route_id in xrange(MAX_ROUTE):
-        routes.append(get_route(driver_id, route_id+1))
+        route = get_route(driver_id, route_id+1)
+        if route is not None:
+            routes.append(route)
     return routes
     
 def save_route(driver_id, route_id, data_frame):

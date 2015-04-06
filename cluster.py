@@ -25,6 +25,12 @@ class Cluster():
             dist_sum.append( distance.euclidean(p1, pnt) )
         return np.mean(dist_sum)
 
+    def min_linkage(self, pnt):
+        dist_sum = []
+        for p1 in self.points:
+            dist_sum.append( distance.euclidean(p1, pnt) )
+        return np.min(dist_sum)
+    
     def merge(self, other):
         #=======================================================================
         # if self.size() + other.size() > 101:
@@ -68,3 +74,15 @@ class Cluster():
         if len(dists) == 0:
             return 0
         return np.mean(dists)
+    
+    def radius(self):
+        l = self.size()
+        dists = []
+        for i in xrange(l):
+            for j in xrange(i+1, l):
+                p1 = self.points[i]
+                p2 = self.points[j]
+                dists.append(distance.euclidean(p1, p2))
+        if len(dists) == 0:
+            return 0
+        return np.max(dists)
