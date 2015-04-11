@@ -31,6 +31,24 @@ class Cluster():
             dist_sum.append( distance.euclidean(p1, pnt) )
         return np.min(dist_sum)
     
+    def closest_point(self, pnt):
+        mindist = None
+        closest_pnt = None
+        for p1 in self.points:
+            d = distance.euclidean(p1, pnt)
+            if mindist is None or d < mindist:
+                mindist = d
+                closest_pnt = p1
+        return closest_pnt, mindist
+
+    def neighbours(self, pnt, rad):
+        res = []
+        for p1 in self.points:
+            d = distance.euclidean(p1, pnt)
+            if d < rad and p1 is not pnt:
+                res.append(p1)
+        return res               
+    
     def merge(self, other):
         self.points = np.append(self.points, other.points, 0)
     
@@ -63,6 +81,12 @@ class Cluster():
         if len(dists) == 0:
             return 0
         return np.mean(dists)
+    
+    def contains(self, pnt):
+        for p in self.points:
+            if distance.euclidean(p, pnt) == 0:
+                return True
+        return False
     
     def diameter(self):
         l = self.size()

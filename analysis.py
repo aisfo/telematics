@@ -3,13 +3,11 @@ Created on Mar 24, 2015
 
 @author: aisfo
 '''
-
 from __future__ import division
 
-from heapq import heappush, heappop
+from heapq import heappush, heappop, heapify
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.spatial import distance
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import Imputer
 
@@ -20,7 +18,7 @@ from preprocess import extract_features
 #returns processed route points and classifications for them
 def analyze(driver):
     
-    ##EXTRACT AND PROCESS FEATURES 
+    ### EXTRACT AND PROCESS FEATURES 
     print "Extracting and processing features..."
     
     #extracting features for driver
@@ -31,17 +29,17 @@ def analyze(driver):
     #impute missing values
     imp = Imputer(missing_values='NaN', strategy='mean', axis=0)
     features = imp.fit_transform(features)
-    
+
     #standardize features for PCA
-    features = (features - features.mean())/features.std()
+    features = (features - features.mean())/features.std() #TODO: standardize?
     
     #principal component analysis
     pca = PCA(0.8) #TODO: number of components? 
-    features = pca.fit_transform(features) #TODO: standardize?
-    print "PCA explained variance:", pca.explained_variance_ratio_, pca.n_components_
-
-
-    ##BUILD CORE CLUSTER AND FIND PROTOTYPE
+    features = pca.fit_transform(features)
+    print "PCA explained variance:", pca.explained_variance_ratio_, pca.n_components_   
+    
+    
+    ### BUILD CORE CLUSTER
     print "Building core cluster and finding prototype..."
     
     #agglomerative clustering until cluster with 101 elements is build
@@ -89,47 +87,56 @@ def analyze(driver):
                 d = cluster.linkage(first_cluster)
                 heappush(pairs, (d, cluster, first_cluster))     
     
-    #compute average point of core cluster as the prototype
-    prototype = core_cluster.centre()
-    print "Prototype:", prototype
     
-    
-    ##CLASSIFY THE ROUTES
+    ### CLASSIFY THE ROUTES
     print "Classifying the routes..."
+    
+    #all zeros labels array
+    labels = np.zeros(200)
     
     #sort the routes by distance from the prototype
     sorted_pnts = []
     for i in xrange(len(features)):
         pnt = features[i]
-        d = distance.euclidean(pnt, prototype) #TODO: Distance measure?
-        sorted_pnts.append( (d, pnt, i) )
+        closest, dist = core_cluster.closest_point(pnt)
+        if dist == 0:
+            labels[i] = 1
+        else:
+            sorted_pnts.append( (dist, i, pnt, closest) )
     sorted_pnts.sort()
     
     #compute compactness and radius of core cluster
     core_cluster_comp = core_cluster.compactness() 
-    core_cluster_diam = core_cluster.diameter()
+    core_cluster_diam = core_cluster.diameter()        
     
     #use core cluster compactness to farthest point distance measure 
     #for evaluating the feature selection
-    far = sorted_pnts[-1][0]    
+    far = sorted_pnts[-1][0]
     print "Compactness to Farthest Point:", core_cluster_comp/far, "[minimize]"
 
-    #final cluster with prototype included 
-    final_cluster = Cluster([prototype])
-    #all zeros labels array
-    labels = np.zeros(200)
-    #classify as true until cutoff
-    for i in xrange(0, len(sorted_pnts)):
-        point_tuple = sorted_pnts[i]
-        dist = point_tuple[0]
-        point = point_tuple[1]
-        l_idx = point_tuple[2]
-       
-        min_fcluster_point_distance = final_cluster.min_linkage(point)
+    #classify points based on density
+    heapify(sorted_pnts)
+    while len(sorted_pnts) > 0:
+        candidate = heappop(sorted_pnts)
+        point = candidate[2]
+        dist = candidate[0]
+        idx = candidate[1]
+        closest = candidate[3]
         
-        if min_fcluster_point_distance < core_cluster_diam: #TODO: Choice and evaluation of cutoff
-            labels[l_idx] = 1
-            final_cluster.add(point)
+        nbrs = core_cluster.neighbours(closest, core_cluster_diam)
+        if len(nbrs) >= 100 and dist < core_cluster_comp:
+            core_cluster.add(point)
+            labels[idx] = 1
+            
+            tsorted_pnts = []
+            for sp in sorted_pnts:
+                sp_pnt = sp[2]
+                sp_idx = sp[1]
+                sp_closest, sp_dist = core_cluster.closest_point(sp_pnt)
+                tsorted_pnts.append( (sp_dist, sp_idx, sp_pnt, sp_closest) )
+            sorted_pnts = tsorted_pnts
+            heapify(sorted_pnts)
+        
         
     return features, labels
     
@@ -137,11 +144,12 @@ def analyze(driver):
 
 if __name__ == "__main__":
     
-    points, labels = analyze(10)
+    points, labels = analyze(333)
     
     plt.figure(1)
     colors = ["red" if l == 1 else "black" for l in labels]
     plt.scatter( points[:,0], points[:,1], color=colors)
+    print "True", sum(labels)
 
-    plt.show()
+    #plt.show()
     
